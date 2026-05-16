@@ -19,13 +19,9 @@ const PRIORITY_CONFIG = {
 
 function parseDBDate(dateString: string) {
     if (!dateString.includes('Z') && !dateString.includes('+')) {
-        const date = new Date(dateString.replace(' ', 'T'))
-        date.setHours(date.getHours() + 6)
-        return date
+        return new Date(dateString.replace(' ', 'T'))
     }
-    const date = new Date(dateString)
-    date.setHours(date.getHours() + 6)
-    return date
+    return new Date(dateString)
 }
 
 function isOverdue(task: Task) {
