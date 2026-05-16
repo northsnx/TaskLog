@@ -39,7 +39,7 @@ username: northsnx  // password:948999  หรือสามารถสร้�
 
 ## 🤖 ใช้ AI ตรงไหนบ้าง
 
-โปรเจกต์นี้สร้างขึ้นโดยใช้ **Gemini CLI** (AI-powered interactive CLI agent) เป็นผู้ช่วยหลักในการพัฒนาแบบ **Auto-Edit**:
+โปรเจกต์นี้สร้างขึ้นโดยใช้ **Gemini CLI / Claude / Codex / ChatGPT** เป็นผู้ช่วยหลักในการพัฒนาแบบ **Auto-Edit**:
 
 | ส่วนของงาน | บทบาทของ AI (Gemini CLI) |
 |---|---|
