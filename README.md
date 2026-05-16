@@ -4,6 +4,7 @@
 
 🔗 **Live Demo:** [https://tasklog.northsnx.site/](https://tasklog.northsnx.site/)
 
+username: northsnx  // password:948999  หรือสามารถสร้างใหม่ได้
 ---
 
 ## 🚀 Tech Stack
