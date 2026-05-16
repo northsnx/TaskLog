@@ -10,6 +10,7 @@ import {
     SortableContext, sortableKeyboardCoordinates,
     verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
+import { List, Calendar, BarChart2 } from 'lucide-react'
 import type { Task, TaskStatus, SessionUser } from '@/types'
 import { DashboardStats } from '@/components/DashboardStats'
 import { TaskForm } from '@/components/TaskForm'
@@ -17,12 +18,15 @@ import { TaskFilters } from '@/components/TaskFilters'
 import { TaskCard } from '@/components/TaskCard'
 import { ExportModal } from '@/components/ExportModal'
 import { StreakBadge } from '@/components/StreakBadge'
+import { CalendarView } from '@/components/CalendarView'
+import { Analytics } from '@/components/Analytics'
 
 type FilterType = TaskStatus | 'ALL' | 'OVERDUE'
+type ViewType = 'LIST' | 'CALENDAR' | 'ANALYTICS'
 
 function isOverdue(task: Task) {
     if (!task.deadline || task.status === 'DONE') return false
-    return new Date(task.deadline) < new Date(new Date().toDateString())
+    return new Date(task.deadline) < new Date()
 }
 
 export default function Dashboard() {
@@ -30,6 +34,7 @@ export default function Dashboard() {
     const [user, setUser] = useState<SessionUser | null>(null)
     const [tasks, setTasks] = useState<Task[]>([])
     const [filter, setFilter] = useState<FilterType>('ALL')
+    const [view, setView] = useState<ViewType>('LIST')
     const [loading, setLoading] = useState(true)
     const [showExport, setShowExport] = useState(false)
     const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
@@ -209,33 +214,83 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="max-w-3xl mx-auto px-4 pt-8 space-y-8">
+            <div className={`mx-auto px-4 pt-8 space-y-8 transition-all duration-500 ${view === 'LIST' ? 'max-w-3xl' : 'max-w-5xl'}`}>
                 <DashboardStats tasks={tasks} />
-                <TaskForm onAdd={handleAdd} />
-                <TaskFilters current={filter} overdueCount={overdueCount} onChange={setFilter} />
 
-                {/* Task List */}
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-3">
-                            {filtered.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-16 bg-white border border-zinc-200 border-dashed rounded-2xl">
-                                    <span className="text-4xl mb-3">📭</span>
-                                    <div className="text-zinc-400 text-sm font-medium">ไม่มีงานในหมวดหมู่นี้</div>
+                {/* View Switcher */}
+                <div className="flex justify-center">
+                    <div className="inline-flex bg-zinc-200/50 p-1 rounded-2xl border border-zinc-200 shadow-inner">
+                        <button
+                            onClick={() => setView('LIST')}
+                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+                                view === 'LIST' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                            }`}
+                        >
+                            <List className="w-4 h-4" />
+                            รายการ
+                        </button>
+                        <button
+                            onClick={() => setView('CALENDAR')}
+                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+                                view === 'CALENDAR' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                            }`}
+                        >
+                            <Calendar className="w-4 h-4" />
+                            ปฏิทิน
+                        </button>
+                        <button
+                            onClick={() => setView('ANALYTICS')}
+                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+                                view === 'ANALYTICS' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+                            }`}
+                        >
+                            <BarChart2 className="w-4 h-4" />
+                            สถิติ
+                        </button>
+                    </div>
+                </div>
+
+                {view === 'LIST' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <TaskForm onAdd={handleAdd} />
+                        <TaskFilters current={filter} overdueCount={overdueCount} onChange={setFilter} />
+
+                        {/* Task List */}
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                                <div className="space-y-3">
+                                    {filtered.length === 0 && (
+                                        <div className="flex flex-col items-center justify-center py-16 bg-white border border-zinc-200 border-dashed rounded-2xl">
+                                            <span className="text-4xl mb-3">📭</span>
+                                            <div className="text-zinc-400 text-sm font-medium">ไม่มีงานในหมวดหมู่นี้</div>
+                                        </div>
+                                    )}
+                                    {filtered.map(task => (
+                                        <TaskCard
+                                            key={task.id}
+                                            task={task}
+                                            onStatusChange={handleStatusChange}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                        />
+                                    ))}
                                 </div>
-                            )}
-                            {filtered.map(task => (
-                                <TaskCard
-                                    key={task.id}
-                                    task={task}
-                                    onStatusChange={handleStatusChange}
-                                    onEdit={handleEdit}
-                                    onDelete={handleDelete}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
+                            </SortableContext>
+                        </DndContext>
+                    </div>
+                )}
+
+                {view === 'CALENDAR' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <CalendarView tasks={tasks} />
+                    </div>
+                )}
+
+                {view === 'ANALYTICS' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <Analytics tasks={tasks} />
+                    </div>
+                )}
             </div>
 
             {showExport && <ExportModal onClose={() => setShowExport(false)} />}

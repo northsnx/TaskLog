@@ -22,21 +22,39 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
 
 function isOverdue(task: Task) {
     if (!task.deadline || task.status === 'DONE') return false
-    return new Date(task.deadline) < new Date(new Date().toDateString())
+    // สร้าง Date object จาก string ใน DB (ซึ่งตอนนี้เราเก็บเป็นเวลาไทยตรงๆ แล้ว)
+    const deadline = new Date(task.deadline)
+    return deadline < new Date()
+}
+
+function formatDisplayDate(dateString: string) {
+    const date = new Date(dateString)
+    return date.toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }) + ' น.'
 }
 
 function formatRelativeTime(dateString: string) {
     const now = new Date()
+    // เนื่องจากเราเก็บเป็น Local Time (ไม่มี timezone) 
+    // เราต้องมั่นใจว่า JS ตีความค่านี้เป็นเวลาท้องถิ่นตอนคำนวณ diff
     const date = new Date(dateString)
 
     const diffMs = now.getTime() - date.getTime()
-
     const seconds = Math.floor(diffMs / 1000)
+
+    // ถ้าค่า diff ติดลบมาก (เช่น ระบบตีความผิด) ให้แสดงเป็น "เมื่อสักครู่"
+    if (seconds < 30) return 'เมื่อสักครู่'
+    
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
 
-    if (seconds < 60) return 'เมื่อสักครู่'
     if (minutes < 60) return `${minutes} นาทีที่แล้ว`
     if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`
     if (days === 1) return 'เมื่อวาน'
@@ -120,10 +138,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                         <div className="flex items-center gap-3 mt-2 text-xs font-medium text-zinc-500">
                             {task.deadline && (
                                 <span>
-                                    📅 {new Date(task.deadline).toLocaleString('th-TH', {
-                                        dateStyle: 'medium',
-                                        timeStyle: 'short',
-                                    })}
+                                    📅 {formatDisplayDate(task.deadline)}
                                 </span>
                             )}
                             <span>🕒 {formatRelativeTime(task.created_at)}</span>

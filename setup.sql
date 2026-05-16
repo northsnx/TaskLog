@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL
 );
 
 -- Create tasks table
@@ -14,10 +14,10 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     status TEXT DEFAULT 'TODO' NOT NULL,
     priority TEXT DEFAULT 'MEDIUM' NOT NULL,
     tags TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
-    deadline TIMESTAMP WITH TIME ZONE,
+    deadline TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL,
+    updated_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL
 );
 
 -- Create user_activity table for streaks

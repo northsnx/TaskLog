@@ -25,6 +25,8 @@ export function TaskForm({ onAdd }: Props) {
         e.preventDefault()
         if (!title.trim()) return
         setAdding(true)
+        
+        // ส่งค่าเวลาท้องถิ่นโดยตรง เพื่อให้ Supabase/Database จัดการตาม Timezone ที่ตั้งไว้
         await onAdd({ title: title.trim(), status, deadline, priority, tags })
         setTitle('')
         setDeadline('')

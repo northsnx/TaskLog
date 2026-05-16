@@ -1,49 +1,140 @@
-// components/Analytics.tsx — ใช้ recharts
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+'use client'
+import { 
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+    PieChart, Pie, Cell, Legend 
+} from 'recharts'
+import type { Task } from '@/types'
 
-// Minimal Task type used by this component
-type Task = {
-  status: string
-  created_at: string
-  updated_at: string
+const COLORS = {
+    TODO: '#71717a',    // zinc-500
+    DOING: '#2563eb',   // blue-600
+    DONE: '#10b981',    // emerald-500
 }
 
-// สร้าง data จาก tasks
 function getWeeklyData(tasks: Task[]) {
-  const days = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    const dateStr = d.toISOString().split('T')[0]
-    return {
-      day: days[d.getDay()],
-      done: tasks.filter(t => t.status === 'DONE' && t.updated_at.startsWith(dateStr)).length,
-      added: tasks.filter(t => t.created_at.startsWith(dateStr)).length,
-    }
-  })
+    const days = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date()
+        d.setHours(0, 0, 0, 0)
+        d.setDate(d.getDate() - (6 - i))
+        return d
+    })
+
+    return last7Days.map(date => {
+        const dateStr = date.toISOString().split('T')[0]
+        return {
+            day: days[date.getDay()],
+            done: tasks.filter(t => t.status === 'DONE' && t.updated_at.startsWith(dateStr)).length,
+            added: tasks.filter(t => t.created_at.startsWith(dateStr)).length,
+        }
+    })
+}
+
+function getStatusData(tasks: Task[]) {
+    const todo = tasks.filter(t => t.status === 'TODO').length
+    const doing = tasks.filter(t => t.status === 'DOING').length
+    const done = tasks.filter(t => t.status === 'DONE').length
+
+    return [
+        { name: 'TODO', value: todo, color: COLORS.TODO },
+        { name: 'DOING', value: doing, color: COLORS.DOING },
+        { name: 'DONE', value: done, color: COLORS.DONE },
+    ].filter(item => item.value > 0)
 }
 
 export function Analytics({ tasks }: { tasks: Task[] }) {
-  const data = getWeeklyData(tasks)
-  return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-      <h3 className="text-sm font-semibold text-zinc-300 mb-4">📊 สรุป 7 วันที่ผ่านมา</h3>
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={data} barGap={2}>
-          <XAxis dataKey="day" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis hide />
-          <Tooltip
-            contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8, fontSize: 12 }}
-            labelStyle={{ color: '#a1a1aa' }}
-          />
-          <Bar dataKey="added" name="เพิ่ม" fill="#3f3f46" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="done" name="เสร็จ" fill="#22c55e" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-      <div className="flex gap-4 mt-2 text-xs text-zinc-500">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-zinc-600 inline-block"/>เพิ่ม</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-500 inline-block"/>เสร็จ</span>
-      </div>
-    </div>
-  )
+    const weeklyData = getWeeklyData(tasks)
+    const statusData = getStatusData(tasks)
+
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Weekly Activity */}
+                <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm">
+                    <h3 className="text-sm font-semibold text-zinc-900 mb-6 flex items-center gap-2">
+                        <span>📊</span> กิจกรรมในรอบ 7 วัน
+                    </h3>
+                    <div className="h-[240px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={weeklyData} barGap={4}>
+                                <XAxis 
+                                    dataKey="day" 
+                                    tick={{ fill: '#71717a', fontSize: 12 }} 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    dy={10}
+                                />
+                                <YAxis hide />
+                                <Tooltip
+                                    cursor={{ fill: '#f4f4f5' }}
+                                    contentStyle={{ 
+                                        background: '#fff', 
+                                        border: '1px solid #e4e4e7', 
+                                        borderRadius: '12px', 
+                                        fontSize: '12px',
+                                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                                    }}
+                                />
+                                <Bar dataKey="added" name="เพิ่ม" fill="#e4e4e7" radius={[4, 4, 0, 0]} barSize={12} />
+                                <Bar dataKey="done" name="เสร็จ" fill="#10b981" radius={[4, 4, 0, 0]} barSize={12} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="flex gap-4 mt-6 text-xs font-medium text-zinc-500 justify-center">
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-zinc-200 inline-block"/>เพิ่มงาน
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"/>เสร็จสิ้น
+                        </span>
+                    </div>
+                </div>
+
+                {/* Status Distribution */}
+                <div className="bg-white border border-zinc-200 rounded-3xl p-6 shadow-sm">
+                    <h3 className="text-sm font-semibold text-zinc-900 mb-6 flex items-center gap-2">
+                        <span>🎯</span> สัดส่วนสถานะงาน
+                    </h3>
+                    <div className="h-[240px] w-full">
+                        {statusData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={statusData}
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        label={({ percent }) => (percent != null ? `${(percent * 100).toFixed(0)}%` : '')}
+                                    >
+                                        {statusData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ 
+                                            background: '#fff', 
+                                            border: '1px solid #e4e4e7', 
+                                            borderRadius: '12px', 
+                                            fontSize: '12px'
+                                        }}
+                                    />
+                                    <Legend 
+                                        verticalAlign="bottom" 
+                                        align="center"
+                                        iconType="circle"
+                                        formatter={(value) => <span className="text-xs font-medium text-zinc-600 uppercase">{value}</span>}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-zinc-400 text-sm italic">
+                                ไม่มีข้อมูลสถานะ
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
