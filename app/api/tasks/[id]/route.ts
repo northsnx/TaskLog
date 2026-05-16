@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.title !== undefined) updates.title = body.title
   if (body.status !== undefined) updates.status = body.status
   if (body.deadline !== undefined) updates.deadline = body.deadline
+  if (body.sort_order !== undefined) updates.sort_order = body.sort_order
 
   const { data, error } = await supabase
     .from('tasks')

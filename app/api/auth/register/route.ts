@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
+    console.error('Registration error:', error)
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Username already taken' }, { status: 409 })
     }

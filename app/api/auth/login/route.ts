@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
     .eq('password', password)
     .single()
 
+    console.log('LOGIN DEBUG:', { username, data, error })
+
   if (error || !data) {
+    console.error('Login error:', error)
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 

@@ -39,10 +39,14 @@ export async function GET(req: NextRequest) {
   ]
   const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n')
 
-  return new NextResponse(csv, {
-    headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename=tasks_${today}.csv`,
-    },
-  })
+  // เพิ่ม BOM ข้างหน้า
+const bom = '\uFEFF'
+const csvWithBom = bom + csv
+
+return new NextResponse(csvWithBom, {
+  headers: {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename=tasks_${today}.csv`,
+  },
+})
 }
