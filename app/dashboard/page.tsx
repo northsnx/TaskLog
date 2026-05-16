@@ -11,7 +11,7 @@ import {
     verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { List, Calendar, BarChart2 } from 'lucide-react'
-import type { Task, TaskStatus, SessionUser } from '@/types'
+import type { Task, TaskStatus, SessionUser, Subtask } from '@/types'
 import { DashboardStats } from '@/components/DashboardStats'
 import { TaskForm } from '@/components/TaskForm'
 import { TaskFilters } from '@/components/TaskFilters'
@@ -150,6 +150,20 @@ export default function Dashboard() {
         })
     }
 
+    const handleUpdateSubtasks = async (id: string, subtasks: Subtask[]) => {
+        await fetch(`/api/tasks/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subtasks }),
+        })
+        await fetchTasks()
+        realtimeRef.current?.send({
+            type: 'broadcast',
+            event: 'refresh',
+            payload: {}
+        })
+    }
+
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event
         if (!over || active.id === over.id) return
@@ -215,8 +229,7 @@ export default function Dashboard() {
             </div>
 
             <div className={`mx-auto px-4 pt-8 space-y-8 transition-all duration-500 ${view === 'LIST' ? 'max-w-3xl' : 'max-w-5xl'}`}>
-                <DashboardStats tasks={tasks} />
-
+               
                 {/* View Switcher */}
                 <div className="flex justify-center">
                     <div className="inline-flex bg-zinc-200/50 p-1 rounded-2xl border border-zinc-200 shadow-inner">
@@ -250,6 +263,8 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                 <DashboardStats tasks={tasks} />
+
                 {view === 'LIST' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <TaskForm onAdd={handleAdd} />
@@ -272,7 +287,9 @@ export default function Dashboard() {
                                             onStatusChange={handleStatusChange}
                                             onEdit={handleEdit}
                                             onDelete={handleDelete}
+                                            onUpdateSubtasks={handleUpdateSubtasks}
                                         />
+
                                     ))}
                                 </div>
                             </SortableContext>

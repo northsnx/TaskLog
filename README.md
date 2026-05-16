@@ -1,6 +1,6 @@
 # 📋 Daily Task Log
 
-> แอปจัดการงานประจำวัน — เปิดใช้งานได้ทันทีผ่าน URL จริง รองรับหลายผู้ใช้ ข้อมูลแยกกันชัดเจน
+> แอปจัดการงานประจำวัน — เปิดใช้งานได้ทันทีผ่าน URL จริง รองรับหลายผู้ใช้ ข้อมูลแยกกันชัดเจน พร้อมระบบวิเคราะห์และปฏิทินอัจฉริยะ
 
 🔗 **Live Demo:** [https://tasklog.northsnx.site/](https://tasklog.northsnx.site/)
 
@@ -10,42 +10,44 @@
 
 | Layer | Technology |
 |---|---|
-| Framework | [Next.js 14](https://nextjs.org/) (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS |
-| Font | [Prompt](https://fonts.google.com/specimen/Prompt) — Google Fonts |
-| Database | [Supabase](https://supabase.com/) (PostgreSQL) |
-| Realtime | Supabase Realtime (postgres_changes) |
-| Drag & Drop | [@dnd-kit](https://dndkit.com/) |
-| Deploy | [Vercel](https://vercel.com/) |
+| **Frontend Framework** | [Next.js 15](https://nextjs.org/) (App Router) |
+| **Language** | TypeScript |
+| **Styling** | Tailwind CSS 4 |
+| **Icons** | [Lucide React](https://lucide.dev/) |
+| **Charts** | [Recharts](https://recharts.org/) (Data Visualization) |
+| **Database & Auth** | [Supabase](https://supabase.com/) (PostgreSQL) |
+| **Realtime** | Supabase Broadcast & Postgres Changes |
+| **Drag & Drop** | [@dnd-kit](https://dndkit.com/) |
+| **Deploy** | [Vercel](https://vercel.com/) |
 
 ---
 
-## ✨ Features
+## ✨ Features (Highlight)
 
-- **Auth** — สมัคร / เข้าสู่ระบบด้วย Username + Password ข้อมูลของแต่ละคนแยกกันสมบูรณ์
-- **Task Management** — เพิ่ม / แก้ไข / ลบงาน พร้อม Status (TODO / DOING / DONE) Priority และ Tags
-- **Deadline Tracking** — แสดงงานที่เลย deadline ด้วยสีแดง พร้อม badge เตือน
-- **Dashboard** — สรุปจำนวนงานแต่ละสถานะ + Progress bar
-- **Realtime Sync** — เปิด 2 tab พร้อมกัน แก้ไขใน tab หนึ่ง อีก tab อัปเดตทันที
-- **Drag to Reorder** — ลากเรียงลำดับงานได้
-- **Streak Counter** — นับวันที่ใช้งานต่อเนื่อง 🔥
-- **Export CSV** — export งานพร้อมกรองตามสถานะและช่วงวันที่ รองรับภาษาไทย
+- **🔄 Multi-Tab Realtime Sync** — อัพเดตข้อมูลทันทีในทุกแท็บเมื่อมีการเปลี่ยนแปลง (ใช้ Supabase Broadcast)
+- **📅 Calendar View** — มุมมองปฏิทินที่ช่วยให้เห็น Deadline ของงานในแต่ละเดือนได้อย่างชัดเจน
+- **📊 Analytics Dashboard** — กราฟวิเคราะห์กิจกรรมย่อยในรอบ 7 วัน และสัดส่วนสถานะงานในรูปแบบ Donut Chart
+- **✅ Sub-tasks (Checklist)** — แตกงานใหญ่เป็นขั้นตอนย่อยๆ พร้อมระบบติดตามความคืบหน้า (Progress Indicator)
+- **🌗 View Switcher** — สลับมุมมองระหว่าง List, Calendar และ Analytics ได้อย่างลื่นไหลพร้อม Animation
+- **⏰ Smart Overdue System** — ระบบแจ้งเตือนงานเกินกำหนดแบบ Real-time ตามเวลาประเทศไทย (UTC+7)
+- **🐾 Drag to Reorder** — จัดลำดับความสำคัญของงานได้ง่ายๆ ด้วยการลากวาง
+- **🔐 Secure Auth** — ระบบ Login/Register พร้อมปุ่ม Show/Hide Password และความปลอดภัยระดับ Database (RLS)
+- **📥 Export CSV** — ส่งออกข้อมูลงานทั้งหมดรองรับภาษาไทย
 
 ---
 
 ## 🤖 ใช้ AI ตรงไหนบ้าง
 
-โปรเจกต์นี้พัฒนาร่วมกับ **Claude (Anthropic) / Gemini / Codex / ChatGPT** ตลอดกระบวนการ:
+โปรเจกต์นี้สร้างขึ้นโดยใช้ **Gemini CLI** (AI-powered interactive CLI agent) เป็นผู้ช่วยหลักในการพัฒนาแบบ **Auto-Edit**:
 
-| ส่วน | รายละเอียด |
+| ส่วนของงาน | บทบาทของ AI (Gemini CLI) |
 |---|---|
-| Architecture | ออกแบบโครงสร้างไฟล์ Next.js App Router และแบ่ง component |
-| Database Schema | สร้าง SQL schema สำหรับ Supabase รวมถึง RLS policies |
-| API Routes | เขียน route handlers ทั้งหมด (auth, tasks, streak, export) |
-| UI Components | เขียน TaskCard, TaskForm, DashboardStats, ExportModal ฯลฯ |
-| Bug Fixing | แก้ปัญหา timezone (UTC vs Asia/Bangkok), cookie session, realtime subscription |
-| Refactoring | แยก component ออกจาก page เพื่อให้โค้ดสะอาดขึ้น |
+| **Real-time Sync** | ออกแบบและวางระบบ Supabase Broadcast เพื่อให้เกิดการซิงค์ข้อมูลข้ามแท็บโดยไม่ต้องรีเฟรช |
+| **New Features** | พัฒนาหน้า Calendar View และ Analytics Dashboard ตั้งแต่ศูนย์จนใช้งานได้จริง |
+| **Complex Logic** | แก้ไขปัญหา Timezone Offset (UTC+7) ที่ซับซ้อนระหว่าง Database และ Browser |
+| **Sub-tasks System** | ออกแบบโครงสร้างข้อมูลแบบ JSONB และสร้าง UI Checklist ที่มีการคำนวณ Progress อัตโนมัติ |
+| **UI/UX Polishing** | ปรับปรุงหน้า Login/Register เพิ่มไอคอนและฟีเจอร์ความสะดวกสบาย (Show Password) |
+| **Linting & Quality** | ตรวจสอบและแก้ไข Lint errors อัตโนมัติเพื่อให้โค้ดสะอาดและพร้อม Deploy |
 
 ---
 
@@ -54,11 +56,7 @@
 ```
 /app
   /api
-    /auth
-      /login/route.ts
-      /register/route.ts
-      /logout/route.ts
-      /me/route.ts
+    /auth/login, logout, me, register
     /tasks
       /route.ts
       /[id]/route.ts
@@ -67,16 +65,15 @@
   /dashboard/page.tsx
   /page.tsx
 /components
-  TaskCard.tsx
-  TaskForm.tsx
-  TaskFilters.tsx
-  DashboardStats.tsx
-  ExportModal.tsx
-  StreakBadge.tsx
+  Analytics.tsx       # ระบบกราฟสถิติ
+  CalendarView.tsx    # มุมมองปฏิทิน
+  TaskCard.tsx        # การ์ดงานหลัก (รวม Sub-tasks)
+  TaskForm.tsx        # ฟอร์มเพิ่มงาน (รองรับ UTC+7)
+  ...
 /lib
-  supabase.ts
+  supabase.ts         # Supabase Client
 /types
-  index.ts
+  index.ts            # Type Definitions
 ```
 
 ---
@@ -91,71 +88,36 @@ cd task-log
 # 2. ติดตั้ง dependencies
 npm install
 
-# 3. สร้างไฟล์ .env.local
-cp .env.example .env.local
-# แล้วใส่ค่า Supabase URL และ Anon Key
+# 3. สร้างไฟล์ .env.local และใส่ค่าจาก Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
 
-# 4. รัน development server
+# 4. รันโปรเจกต์
 npm run dev
 ```
 
 ---
 
-## ⚙️ Environment Variables
+## 🗄️ Database Setup (Supabase)
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
-
----
-
-## 🗄️ Database Setup
-
-รัน SQL นี้ใน Supabase SQL Editor:
+รัน SQL นี้ใน SQL Editor เพื่อเริ่มต้นระบบ:
 
 ```sql
-CREATE TABLE users (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- สำหรับตารางหลัก (อัพเดตเป็นเวลาไทย)
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS subtasks JSONB DEFAULT '[]'::jsonb;
 
-CREATE TABLE tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  title TEXT NOT NULL,
-  status TEXT CHECK (status IN ('TODO', 'DOING', 'DONE')) DEFAULT 'TODO',
-  priority TEXT CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')) DEFAULT 'MEDIUM',
-  tags TEXT[] DEFAULT '{}',
-  deadline DATE,
-  sort_order INT DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- เปลี่ยนชนิดคอลัมน์เพื่อให้เก็บเวลาไทยได้แม่นยำ
+ALTER TABLE tasks ALTER COLUMN deadline TYPE TIMESTAMP;
+ALTER TABLE tasks ALTER COLUMN created_at TYPE TIMESTAMP;
+ALTER TABLE tasks ALTER COLUMN created_at SET DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok');
 
-CREATE TABLE user_activity (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  activity_date DATE NOT NULL,
-  UNIQUE(user_id, activity_date)
-);
-
--- Disable RLS (auth handled server-side via cookies)
-ALTER TABLE users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE tasks DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_activity DISABLE ROW LEVEL SECURITY;
-
--- Enable Realtime
+-- เปิดใช้งาน Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE tasks;
 ```
 
 ---
 
-## 📦 Deploy บน Vercel
+## 📦 Deploy
 
-1. Push โค้ดขึ้น GitHub
-2. Import repo ใน [Vercel](https://vercel.com/)
-3. เพิ่ม Environment Variables ใน Vercel Dashboard
-4. Deploy — เสร็จแล้ว 🎉
+- **Platform:** Vercel (Auto-deploy via GitHub)
+- **DB Hosting:** Supabase

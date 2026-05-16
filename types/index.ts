@@ -1,5 +1,11 @@
 export type TaskStatus = 'TODO' | 'DOING' | 'DONE'
 
+export interface Subtask {
+    id: string
+    title: string
+    completed: boolean
+}
+
 export interface User {
     id: string
     username: string
@@ -14,6 +20,7 @@ export interface Task {
     priority: 'LOW' | 'MEDIUM' | 'HIGH'
     tags: string[]
     deadline: string | null
+    subtasks?: Subtask[]
     created_at: string
     updated_at: string
 }

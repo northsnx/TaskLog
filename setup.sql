@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     deadline TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL,
-    updated_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL
+    updated_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL,
+    subtasks JSONB DEFAULT '[]'::jsonb
 );
 
 -- Create user_activity table for streaks

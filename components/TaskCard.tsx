@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task, TaskStatus } from '@/types'
+import { ChevronDown, ChevronUp, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import type { Task, TaskStatus, Subtask } from '@/types'
 
 const STATUS_CONFIG = {
     TODO: { label: 'TODO', color: 'bg-zinc-100 text-zinc-600 border border-zinc-200' },
@@ -16,19 +17,25 @@ const PRIORITY_CONFIG = {
     HIGH: { label: 'High', color: 'text-red-600 bg-red-50', icon: '▲' },
 }
 
-const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
-    TODO: 'DOING', DOING: 'DONE', DONE: 'TODO',
+function parseDBDate(dateString: string) {
+    if (!dateString.includes('Z') && !dateString.includes('+')) {
+        const date = new Date(dateString.replace(' ', 'T'))
+        date.setHours(date.getHours() + 6)
+        return date
+    }
+    const date = new Date(dateString)
+    date.setHours(date.getHours() + 6)
+    return date
 }
 
 function isOverdue(task: Task) {
     if (!task.deadline || task.status === 'DONE') return false
-    // สร้าง Date object จาก string ใน DB (ซึ่งตอนนี้เราเก็บเป็นเวลาไทยตรงๆ แล้ว)
-    const deadline = new Date(task.deadline)
+    const deadline = parseDBDate(task.deadline)
     return deadline < new Date()
 }
 
 function formatDisplayDate(dateString: string) {
-    const date = new Date(dateString)
+    const date = parseDBDate(dateString)
     return date.toLocaleString('th-TH', {
         year: 'numeric',
         month: 'short',
@@ -41,16 +48,11 @@ function formatDisplayDate(dateString: string) {
 
 function formatRelativeTime(dateString: string) {
     const now = new Date()
-    // เนื่องจากเราเก็บเป็น Local Time (ไม่มี timezone) 
-    // เราต้องมั่นใจว่า JS ตีความค่านี้เป็นเวลาท้องถิ่นตอนคำนวณ diff
-    const date = new Date(dateString)
-
+    const date = parseDBDate(dateString)
     const diffMs = now.getTime() - date.getTime()
     const seconds = Math.floor(diffMs / 1000)
 
-    // ถ้าค่า diff ติดลบมาก (เช่น ระบบตีความผิด) ให้แสดงเป็น "เมื่อสักครู่"
     if (seconds < 30) return 'เมื่อสักครู่'
-    
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
@@ -72,21 +74,50 @@ interface Props {
     onStatusChange: (id: string, status: TaskStatus) => void
     onEdit: (id: string, title: string) => void
     onDelete: (id: string) => void
+    onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
+export function TaskCard({ task, onStatusChange, onEdit, onDelete, onUpdateSubtasks }: Props) {
     const [editing, setEditing] = useState(false)
     const [editTitle, setEditTitle] = useState(task.title)
     const [showDelete, setShowDelete] = useState(false)
+    const [expanded, setExpanded] = useState(false)
+    const [newSubtask, setNewSubtask] = useState('')
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
     const overdue = isOverdue(task)
     const cfg = STATUS_CONFIG[task.status]
+    const subtasks = task.subtasks || []
+    const completedSubtasks = subtasks.filter(s => s.completed).length
 
     const handleSave = () => {
         if (editTitle.trim()) onEdit(task.id, editTitle.trim())
         setEditing(false)
+    }
+
+    const toggleSubtask = (subId: string) => {
+        const updated = subtasks.map(s => 
+            s.id === subId ? { ...s, completed: !s.completed } : s
+        )
+        onUpdateSubtasks(task.id, updated)
+    }
+
+    const addSubtask = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newSubtask.trim()) return
+        const newItem: Subtask = {
+            id: crypto.randomUUID(),
+            title: newSubtask.trim(),
+            completed: false
+        }
+        onUpdateSubtasks(task.id, [...subtasks, newItem])
+        setNewSubtask('')
+    }
+
+    const deleteSubtask = (subId: string) => {
+        const updated = subtasks.filter(s => s.id !== subId)
+        onUpdateSubtasks(task.id, updated)
     }
 
     return (
@@ -97,7 +128,6 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
             <div className={`bg-white border rounded-3xl p-5 shadow-sm transition-all hover:shadow-md ${overdue ? 'border-red-300 bg-red-50/50' : 'border-zinc-200'
                 }`}>
                 <div className="flex items-start gap-3">
-                    {/* Drag Handle */}
                     <div
                         {...attributes}
                         {...listeners}
@@ -132,6 +162,11 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                                     {overdue && '⚠️ '}{task.title}
                                 </span>
                                 {overdue && <span className="text-xs font-medium text-red-500 bg-red-100 px-2 py-0.5 rounded-full">เลยกำหนด!</span>}
+                                {subtasks.length > 0 && (
+                                    <span className="text-[10px] font-bold bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full flex items-center gap-1 border border-zinc-200">
+                                        ✅ {completedSubtasks}/{subtasks.length}
+                                    </span>
+                                )}
                             </div>
                         )}
 
@@ -155,8 +190,14 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                         )}
                     </div>
 
-                    {/* Badges (Priority & Status) */}
                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-none">
+                        <button 
+                            onClick={() => setExpanded(!expanded)}
+                            className={`p-2 rounded-xl transition-all ${expanded ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
+                            title={expanded ? 'ปิด Checklist' : 'เปิด Checklist'}
+                        >
+                            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${PRIORITY_CONFIG[task.priority].color}`}>
                             {PRIORITY_CONFIG[task.priority].icon} {PRIORITY_CONFIG[task.priority].label}
                         </span>
@@ -166,7 +207,52 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                     </div>
                 </div>
 
-                {/* Action Buttons */}
+                {expanded && (
+                    <div className="mt-4 pt-4 border-t border-zinc-100 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-1">Checklist</div>
+                        <div className="space-y-1">
+                            {subtasks.map(sub => (
+                                <div key={sub.id} className="flex items-center gap-2 group p-1.5 hover:bg-zinc-50 rounded-xl transition-colors">
+                                    <button 
+                                        onClick={() => toggleSubtask(sub.id)}
+                                        className={`flex-none transition-colors ${sub.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-zinc-400'}`}
+                                    >
+                                        {sub.completed ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
+                                    </button>
+                                    <span className={`flex-1 text-sm transition-all ${sub.completed ? 'text-zinc-400 line-through' : 'text-zinc-700'}`}>
+                                        {sub.title}
+                                    </span>
+                                    <button 
+                                        onClick={() => deleteSubtask(sub.id)}
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <form onSubmit={addSubtask} className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                <input 
+                                    type="text"
+                                    value={newSubtask}
+                                    onChange={e => setNewSubtask(e.target.value)}
+                                    placeholder="เพิ่มขั้นตอนย่อย..."
+                                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-all"
+                                />
+                            </div>
+                            <button 
+                                type="submit"
+                                disabled={!newSubtask.trim()}
+                                className="bg-zinc-900 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-sm"
+                            >
+                                เพิ่ม
+                            </button>
+                        </form>
+                    </div>
+                )}
+
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-100">
                     <select
                         value={task.status}
@@ -194,29 +280,20 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
 
             {showDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-
                     <div className="w-full max-w-sm bg-white border border-zinc-200 rounded-3xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-
-                        {/* Icon */}
                         <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-2xl mx-auto mb-4">
                             🗑️
                         </div>
-
-                        {/* Title */}
                         <h3 className="text-lg font-semibold text-zinc-900 text-center">
                             ลบงานนี้?
                         </h3>
-
-                        {/* Description */}
                         <p className="text-sm text-zinc-500 text-center mt-2 leading-relaxed">
                             คุณแน่ใจหรือไม่ว่าต้องการลบ
                             <br />
                             <span className="font-medium text-zinc-700">
-                                "{task.title}"
+                                &quot;{task.title}&quot;
                             </span>
                         </p>
-
-                        {/* Actions */}
                         <div className="flex gap-3 mt-6">
                             <button
                                 onClick={() => setShowDelete(false)}
@@ -224,7 +301,6 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                             >
                                 ยกเลิก
                             </button>
-
                             <button
                                 onClick={() => {
                                     onDelete(task.id)
@@ -239,6 +315,5 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: Props) {
                 </div>
             )}
         </div>
-
     )
 }
