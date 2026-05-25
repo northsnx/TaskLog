@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (body.title !== undefined) updates.title = body.title
+  if (body.description !== undefined) updates.description = body.description
   if (body.status !== undefined) updates.status = body.status
   if (body.deadline !== undefined) updates.deadline = body.deadline
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order

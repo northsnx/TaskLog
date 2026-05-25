@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
+    description TEXT,
     status TEXT DEFAULT 'TODO' NOT NULL,
     priority TEXT DEFAULT 'MEDIUM' NOT NULL,
     tags TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,

@@ -23,6 +23,7 @@ import type { TaskStatus } from '@/types'
 interface Props {
   onAdd: (data: {
     title: string
+    description: string
     status: TaskStatus
     deadline: string
     priority: 'LOW' | 'MEDIUM' | 'HIGH'
@@ -34,6 +35,7 @@ export function TaskForm({ onAdd }: Props) {
   const [expanded, setExpanded] = useState(false)
 
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [status, setStatus] = useState<TaskStatus>('TODO')
   const [deadline, setDeadline] = useState('')
   const [priority, setPriority] = useState<
@@ -54,6 +56,7 @@ export function TaskForm({ onAdd }: Props) {
     try {
       await onAdd({
         title: title.trim(),
+        description: description.trim(),
         status,
         deadline,
         priority,
@@ -61,6 +64,7 @@ export function TaskForm({ onAdd }: Props) {
       })
 
       setTitle('')
+      setDescription('')
       setDeadline('')
       setTags([])
       setTagInput('')
@@ -149,6 +153,19 @@ export function TaskForm({ onAdd }: Props) {
                 className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4 text-base font-bold text-zinc-900 transition-all placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-100"
                 required
               />
+
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="ml-1 text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                  รายละเอียดเพิ่มเติม
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="ใส่รายละเอียดเพิ่มเติมที่นี่..."
+                  className="w-full min-h-[100px] rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4 text-sm font-medium text-zinc-900 transition-all placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-100 resize-none"
+                />
+              </div>
 
               {/* Grid */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

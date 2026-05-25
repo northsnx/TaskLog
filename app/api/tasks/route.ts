@@ -28,13 +28,14 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const user = JSON.parse(session.value)
 
-    const { title, status, deadline, priority, tags } = await req.json()
+    const { title, description, status, deadline, priority, tags } = await req.json()
 
     const { data, error } = await supabase
         .from('tasks')
         .insert({
             user_id: user.id,
             title,
+            description,
             status,
             deadline: deadline || null,
             priority: priority || 'MEDIUM',  // เพิ่ม

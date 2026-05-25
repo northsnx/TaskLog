@@ -101,7 +101,7 @@ export default function Dashboard() {
     }, [fetchTasks, fetchUser, user?.id])
 
     const handleAdd = async (data: {
-        title: string; status: TaskStatus; deadline: string
+        title: string; description: string; status: TaskStatus; deadline: string
         priority: 'LOW' | 'MEDIUM' | 'HIGH'; tags: string[]
     }) => {
         const res = await fetch('/api/tasks', {
@@ -147,11 +147,11 @@ export default function Dashboard() {
         await fetchTasks()
     }
 
-    const handleEdit = async (id: string, title: string) => {
+    const handleEdit = async (id: string, title: string, description?: string) => {
         const res = await fetch(`/api/tasks/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title }),
+            body: JSON.stringify({ title, description }),
         })
         if (res.ok) toast.success('แก้ไขข้อมูลเรียบร้อย')
         await fetchTasks()
@@ -206,30 +206,30 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
-                <div className="text-zinc-500 text-sm font-medium animate-pulse">กำลังโหลดข้อมูล...</div>
+            <div className="min-h-screen bg-gradient-to-br from-indigo-50/40 via-white to-violet-50/40 dark:bg-zinc-950 flex items-center justify-center">
+                <div className="text-violet-500 text-sm font-medium animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         )
     }
 
     return (
-        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 pb-16 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-zinc-100 dark:selection:text-zinc-900">
+        <main className="min-h-screen bg-gradient-to-br from-indigo-50/40 via-white to-violet-50/40 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 pb-16 font-sans selection:bg-violet-600 selection:text-white dark:selection:bg-violet-500 dark:selection:text-white">
             {/* Header */}
             <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center shadow-lg shadow-zinc-200 dark:shadow-none">
                             <Image
                                 src="/favicon.ico"
-                                alt="ExTaskX Logo" 
+                                alt="ExTaskX Logo"
                                 width={20}
                                 height={20}
-                                className="invert dark:invert-0"
+                                className="w-9 h-9"
                             />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-base font-black tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">ExTaskX</span>
-                            <span className="text-[10px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">Dashboard</span>
+                        <div className="flex items-center gap-4">
+                            <span className="text-xl font-bold">ExTaskX</span>
+                            <span className="text-sm text-indigo-600 dark:text-indigo-400 rounded-full bg-indigo-200/40 dark:bg-zinc-800 px-2 py-1">
+                                @{user?.username}
+                            </span>
                         </div>
                     </div>
 
@@ -298,7 +298,7 @@ export default function Dashboard() {
                             <button
                                 onClick={() => setView('LIST')}
                                 className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                                    view === 'LIST' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                    view === 'LIST' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                             >
                                 <List className="w-4 h-4" />
@@ -307,7 +307,7 @@ export default function Dashboard() {
                             <button
                                 onClick={() => setView('CALENDAR')}
                                 className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                                    view === 'CALENDAR' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                    view === 'CALENDAR' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                             >
                                 <Calendar className="w-4 h-4" />
@@ -316,7 +316,7 @@ export default function Dashboard() {
                             <button
                                 onClick={() => setView('ANALYTICS')}
                                 className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
-                                    view === 'ANALYTICS' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                    view === 'ANALYTICS' ? 'bg-white dark:bg-zinc-700 text-violet-600 dark:text-violet-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
                                 }`}
                             >
                                 <BarChart2 className="w-4 h-4" />
@@ -332,7 +332,7 @@ export default function Dashboard() {
                                     placeholder="ค้นหางานหรือแท็ก..."
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-all placeholder:text-zinc-400"
+                                    className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-300/50 dark:focus:border-violet-500 transition-all placeholder:text-zinc-400"
                                 />
                             </div>
                         )}
@@ -348,7 +348,7 @@ export default function Dashboard() {
                         <div className="space-y-6">
                             <div className="flex items-center justify-between px-2">
                                 <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                                    <span className="w-2 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-full" />
+                                    <span className="w-2 h-6 bg-gradient-to-b from-violet-600 to-indigo-500 rounded-full" />
                                     งานของคุณ
                                     <span className="text-sm font-bold text-zinc-400 ml-2">{filtered.length}</span>
                                 </h2>

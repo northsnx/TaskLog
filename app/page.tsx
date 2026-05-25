@@ -44,11 +44,11 @@ export default function LoginPage() {
           className="absolute inset-0 w-full h-full object-cover"
         />
         {/* เลเยอร์สีดำบางๆ ทับรูป เพื่อให้ดูพรีเมียมขึ้น (ลบออกได้ถ้าไม่ชอบ) */}
-        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/60 via-indigo-900/20 to-transparent"></div>
       </div>
 
       {/* ด้านขวา: ฟอร์ม Login */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-8 bg-zinc-50">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-8 bg-gradient-to-br from-white via-indigo-50/30 to-violet-50/50">
         <div className="w-full max-w-md bg-white border border-zinc-200 rounded-3xl p-8 sm:p-10 shadow-sm">
           <div className="mb-8 text-center">
             <Image
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
-                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-zinc-900 text-sm focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all placeholder:text-zinc-400"
+                className="w-full bg-white border border-zinc-200 rounded-xl px-4 py-3 text-zinc-900 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400/50 transition-all placeholder:text-zinc-400"
                 placeholder="กรอกชื่อผู้ใช้ของคุณ"
               />
             </div>
@@ -124,7 +124,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-zinc-900 text-white font-semibold py-3 rounded-xl hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm mt-2 shadow-sm"
+              className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm mt-2 shadow-md shadow-violet-200 active:scale-[0.98]"
             >
               {loading ? 'กำลังดำเนินการ...' : mode === 'login' ? 'เข้าสู่ระบบ' : 'สร้างบัญชีใหม่'}
             </button>

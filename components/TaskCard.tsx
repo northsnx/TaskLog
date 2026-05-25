@@ -106,7 +106,7 @@ function fmtRel(d: string) {
 interface Props {
     task: Task
     onStatusChange: (id: string, status: TaskStatus) => void
-    onEdit: (id: string, title: string) => void
+    onEdit: (id: string, title: string, description?: string) => void
     onDelete: (id: string) => void
     onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void
 }
@@ -121,6 +121,7 @@ export function TaskCard({
 }: Props) {
     const [editing, setEditing] = useState(false)
     const [editTitle, setEditTitle] = useState(task.title)
+    const [editDescription, setEditDescription] = useState(task.description || '')
     const [showDelete, setShowDelete] = useState(false)
     const [expanded, setExpanded] = useState(false)
     const [newSubtask, setNewSubtask] = useState('')
@@ -151,7 +152,7 @@ export function TaskCard({
 
     const handleSave = () => {
         if (editTitle.trim()) {
-            onEdit(task.id, editTitle.trim())
+            onEdit(task.id, editTitle.trim(), editDescription.trim())
         }
 
         setEditing(false)
@@ -242,50 +243,65 @@ export function TaskCard({
                             {isDone && <CheckCircle2 className="h-5 w-5" />}
                         </button>
 
-                        {/* Title */}
-                        <div className="min-w-0 flex-1">
+                                <div className="min-w-0 flex-1">
                             {editing ? (
-                                <div className="flex flex-wrap items-center gap-3">
-
+                                <div className="flex flex-col gap-3">
                                     <input
                                         autoFocus
                                         value={editTitle}
                                         onChange={(e) => setEditTitle(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') handleSave()
-                                            if (e.key === 'Escape') setEditing(false)
-                                        }}
-                                        className="min-w-0 flex-1 border-b border-zinc-900 bg-transparent pb-1 text-lg font-bold text-zinc-900 outline-none dark:border-zinc-100 dark:text-zinc-100"
+                                        placeholder="ชื่อหัวข้อ..."
+                                        className="w-full border-b border-zinc-900 bg-transparent pb-1 text-lg font-bold text-zinc-900 outline-none dark:border-zinc-100 dark:text-zinc-100"
                                     />
 
-                                    <button
-                                        onClick={handleSave}
-                                        className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
-                                    >
-                                        Save
-                                    </button>
+                                    <textarea
+                                        value={editDescription}
+                                        onChange={(e) => setEditDescription(e.target.value)}
+                                        placeholder="รายละเอียด..."
+                                        className="w-full min-h-[80px] bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-3 text-sm text-zinc-700 dark:text-zinc-300 outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-zinc-600 resize-none"
+                                    />
 
-                                    <button
-                                        onClick={() => setEditing(false)}
-                                        className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-bold text-zinc-600 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-                                    >
-                                        Cancel
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleSave}
+                                            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
+                                        >
+                                            Save
+                                        </button>
+
+                                        <button
+                                            onClick={() => setEditing(false)}
+                                            className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-bold text-zinc-600 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
-                                <p
-                                    className={cn(
-                                        'text-lg font-bold leading-relaxed tracking-tight md:text-xl',
-                                        isDone
-                                            ? 'text-zinc-400 line-through'
-                                            : 'text-zinc-800 dark:text-zinc-100',
-                                        overdue &&
-                                        !isDone &&
-                                        'text-rose-600 dark:text-rose-400'
+                                <div className="space-y-1">
+                                    <p
+                                        className={cn(
+                                            'text-lg font-bold leading-relaxed tracking-tight md:text-xl',
+                                            isDone
+                                                ? 'text-zinc-400 line-through'
+                                                : 'text-zinc-800 dark:text-zinc-100',
+                                            overdue &&
+                                            !isDone &&
+                                            'text-rose-600 dark:text-rose-400'
+                                        )}
+                                    >
+                                        {task.title}
+                                    </p>
+                                    
+                                    {task.description && (
+                                        <p className={cn(
+                                            "text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2",
+                                            isDone && "line-through opacity-60"
+                                        )}>
+                                            {task.description}
+                                        </p>
                                     )}
-                                >
-                                    {task.title}
-                                </p>
+                                </div>
                             )}
                         </div>
 
@@ -372,7 +388,7 @@ export function TaskCard({
                             {task.tags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                    className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-600 dark:border-violet-800/60 dark:bg-violet-950/30 dark:text-violet-300"
                                 >
                                     #{tag}
                                 </span>
@@ -499,6 +515,7 @@ export function TaskCard({
                                 onClick={() => {
                                     setEditing(true)
                                     setEditTitle(task.title)
+                                    setEditDescription(task.description || '')
                                 }}
                                 className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
                             >
