@@ -1,70 +1,108 @@
 'use client'
+
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronDown, ChevronUp, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+    Plus,
+    Trash2,
+    CheckCircle2,
+    Circle,
+    GripVertical,
+    Edit3,
+    Calendar,
+    Clock,
+    ChevronDown,
+    ListTodo,
+    Flame,
+    Minus,
+    ArrowUp,
+} from 'lucide-react'
+
 import type { Task, TaskStatus, Subtask } from '@/types'
+import { cn } from '@/lib/utils'
 
-const STATUS_CONFIG = {
-    TODO: { label: 'TODO', color: 'bg-zinc-100 text-zinc-600 border border-zinc-200' },
-    DOING: { label: 'DOING', color: 'bg-blue-50 text-blue-600 border border-blue-200' },
-    DONE: { label: 'DONE', color: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-}
-
+// ── Priority ──────────────────────────────────────────────────────────────────
 const PRIORITY_CONFIG = {
-    LOW: { label: 'Low', color: 'text-zinc-500 bg-zinc-100', icon: '▽' },
-    MEDIUM: { label: 'Medium', color: 'text-amber-600 bg-amber-50', icon: '◈' },
-    HIGH: { label: 'High', color: 'text-red-600 bg-red-50', icon: '▲' },
+    LOW: {
+        label: 'Low',
+        pill: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+        icon: Minus,
+    },
+    MEDIUM: {
+        label: 'Medium',
+        pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+        icon: ArrowUp,
+    },
+    HIGH: {
+        label: 'High',
+        pill: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
+        icon: Flame,
+    },
 }
 
-function parseDBDate(dateString: string) {
-    if (!dateString.includes('Z') && !dateString.includes('+')) {
-        return new Date(dateString.replace(' ', 'T'))
-    }
-    return new Date(dateString)
+// ── Status ────────────────────────────────────────────────────────────────────
+const STATUS_CONFIG = {
+    TODO: {
+        label: 'To Do',
+        pill: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+        left: 'bg-slate-400',
+    },
+    DOING: {
+        label: 'In Progress',
+        pill: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+        left: 'bg-blue-500',
+    },
+    DONE: {
+        label: 'Done',
+        pill: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+        left: 'bg-emerald-500',
+    },
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function parseDBDate(d: string) {
+    return new Date(
+        d.includes('Z') || d.includes('+') ? d : d.replace(' ', 'T')
+    )
 }
 
 function isOverdue(task: Task) {
     if (!task.deadline || task.status === 'DONE') return false
-    const deadline = parseDBDate(task.deadline)
-    return deadline < new Date()
+    return parseDBDate(task.deadline) < new Date()
 }
 
-function formatDisplayDate(dateString: string) {
-    const date = parseDBDate(dateString)
-    return date.toLocaleString('th-TH', {
-        year: 'numeric',
+function fmtDate(d: string) {
+    return parseDBDate(d).toLocaleString('th-TH', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false,
-    }) + ' น.'
+    })
 }
 
-function formatRelativeTime(dateString: string) {
-    const now = new Date()
-    const date = parseDBDate(dateString)
-    const diffMs = now.getTime() - date.getTime()
-    const seconds = Math.floor(diffMs / 1000)
+function fmtRel(d: string) {
+    const s = Math.floor((Date.now() - parseDBDate(d).getTime()) / 1000)
 
-    if (seconds < 30) return 'เมื่อสักครู่'
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
+    if (s < 60) return 'เมื่อกี้'
 
-    if (minutes < 60) return `${minutes} นาทีที่แล้ว`
-    if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`
-    if (days === 1) return 'เมื่อวาน'
-    if (days < 7) return `${days} วันที่แล้ว`
+    const m = Math.floor(s / 60)
+    if (m < 60) return `${m} นาที`
 
-    return date.toLocaleDateString('th-TH', {
-        year: 'numeric',
+    const h = Math.floor(m / 60)
+    if (h < 24) return `${h} ชั่วโมง`
+
+    const day = Math.floor(h / 24)
+    if (day < 7) return `${day} วัน`
+
+    return parseDBDate(d).toLocaleDateString('th-TH', {
         month: 'short',
         day: 'numeric',
     })
 }
 
+// ── Props ─────────────────────────────────────────────────────────────────────
 interface Props {
     task: Task
     onStatusChange: (id: string, status: TaskStatus) => void
@@ -73,243 +111,479 @@ interface Props {
     onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, onDelete, onUpdateSubtasks }: Props) {
+// ─────────────────────────────────────────────────────────────────────────────
+export function TaskCard({
+    task,
+    onStatusChange,
+    onEdit,
+    onDelete,
+    onUpdateSubtasks,
+}: Props) {
     const [editing, setEditing] = useState(false)
     const [editTitle, setEditTitle] = useState(task.title)
     const [showDelete, setShowDelete] = useState(false)
     const [expanded, setExpanded] = useState(false)
     const [newSubtask, setNewSubtask] = useState('')
 
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: task.id })
 
     const overdue = isOverdue(task)
-    const cfg = STATUS_CONFIG[task.status]
     const subtasks = task.subtasks || []
-    const completedSubtasks = subtasks.filter(s => s.completed).length
+
+    const done = subtasks.filter((s) => s.completed).length
+
+    const progress =
+        subtasks.length > 0 ? (done / subtasks.length) * 100 : 0
+
+    const isDone = task.status === 'DONE'
+    const isDoing = task.status === 'DOING'
+
+    const PIcon = PRIORITY_CONFIG[task.priority].icon
+    const statusCfg = STATUS_CONFIG[task.status]
+    const priorityCfg = PRIORITY_CONFIG[task.priority]
 
     const handleSave = () => {
-        if (editTitle.trim()) onEdit(task.id, editTitle.trim())
-        setEditing(false)
-    }
+        if (editTitle.trim()) {
+            onEdit(task.id, editTitle.trim())
+        }
 
-    const toggleSubtask = (subId: string) => {
-        const updated = subtasks.map(s => 
-            s.id === subId ? { ...s, completed: !s.completed } : s
-        )
-        onUpdateSubtasks(task.id, updated)
+        setEditing(false)
     }
 
     const addSubtask = (e: React.FormEvent) => {
         e.preventDefault()
-        if (!newSubtask.trim()) return
-        const newItem: Subtask = {
-            id: crypto.randomUUID(),
-            title: newSubtask.trim(),
-            completed: false
-        }
-        onUpdateSubtasks(task.id, [...subtasks, newItem])
-        setNewSubtask('')
-    }
 
-    const deleteSubtask = (subId: string) => {
-        const updated = subtasks.filter(s => s.id !== subId)
-        onUpdateSubtasks(task.id, updated)
+        if (!newSubtask.trim()) return
+
+        onUpdateSubtasks(task.id, [
+            ...subtasks,
+            {
+                id: crypto.randomUUID(),
+                title: newSubtask.trim(),
+                completed: false,
+            },
+        ])
+
+        setNewSubtask('')
     }
 
     return (
         <div
             ref={setNodeRef}
-            style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+            style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
+                opacity: isDragging ? 0.45 : 1,
+            }}
         >
-            <div className={`bg-white border rounded-3xl p-5 shadow-sm transition-all hover:shadow-md ${overdue ? 'border-red-300 bg-red-50/50' : 'border-zinc-200'
-                }`}>
-                <div className="flex items-start gap-3">
-                    <div
-                        {...attributes}
-                        {...listeners}
-                        className="text-zinc-300 hover:text-zinc-500 cursor-grab active:cursor-grabbing pt-0.5 select-none touch-none flex-none transition-colors"
-                    >
-                        🐾
-                    </div>
+            <div
+                className={cn(
+                    'relative overflow-hidden rounded-3xl border',
+                    'bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl',
+                    'transition-all duration-300',
+                    'hover:-translate-y-1 hover:shadow-2xl',
+                    'shadow-sm',
+                    overdue && !isDone
+                        ? 'border-rose-200 dark:border-rose-800/60'
+                        : 'border-zinc-200 dark:border-zinc-800',
+                    isDone && 'opacity-75'
+                )}
+            >
+                {/* Left stripe */}
+                <div
+                    className={cn(
+                        'absolute left-0 inset-y-0 w-1',
+                        statusCfg.left
+                    )}
+                />
 
-                    <div className="flex-1 min-w-0">
-                        {editing ? (
-                            <div className="flex gap-2">
-                                <input
-                                    autoFocus
-                                    value={editTitle}
-                                    onChange={e => setEditTitle(e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') handleSave()
-                                        if (e.key === 'Escape') setEditing(false)
-                                    }}
-                                    className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 transition-all"
-                                />
-                                <button onClick={handleSave} className="text-xs bg-zinc-900 text-white px-4 py-2 rounded-xl font-medium hover:bg-zinc-800 transition-colors">
-                                    บันทึก
-                                </button>
-                                <button onClick={() => setEditing(false)} className="text-xs text-zinc-500 hover:text-zinc-900 px-2 transition-colors">
-                                    ยกเลิก
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-base font-semibold ${overdue ? 'text-red-600' : 'text-zinc-900'}`}>
-                                    {overdue && '⚠️ '}{task.title}
-                                </span>
-                                {overdue && <span className="text-xs font-medium text-red-500 bg-red-100 px-2 py-0.5 rounded-full">เลยกำหนด!</span>}
-                                {subtasks.length > 0 && (
-                                    <span className="text-[10px] font-bold bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full flex items-center gap-1 border border-zinc-200">
-                                        ✅ {completedSubtasks}/{subtasks.length}
-                                    </span>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-3 mt-2 text-xs font-medium text-zinc-500">
-                            {task.deadline && (
-                                <span>
-                                    📅 {formatDisplayDate(task.deadline)}
-                                </span>
+                {/* Progress */}
+                {subtasks.length > 0 && (
+                    <div className="mx-6 mt-4 h-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.6 }}
+                            className={cn(
+                                'h-full rounded-full',
+                                isDone
+                                    ? 'bg-emerald-500'
+                                    : isDoing
+                                        ? 'bg-blue-500'
+                                        : 'bg-zinc-500'
                             )}
-                            <span>🕒 {formatRelativeTime(task.created_at)}</span>
-                        </div>
-
-                        {task.tags && task.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                {task.tags.map(tag => (
-                                    <span key={tag} className="text-xs font-medium bg-zinc-100 border border-zinc-200 text-zinc-600 px-2.5 py-0.5 rounded-full">
-                                        #{tag}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-none">
-                        <button 
-                            onClick={() => setExpanded(!expanded)}
-                            className={`p-2 rounded-xl transition-all ${expanded ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}
-                            title={expanded ? 'ปิด Checklist' : 'เปิด Checklist'}
-                        >
-                            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </button>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${PRIORITY_CONFIG[task.priority].color}`}>
-                            {PRIORITY_CONFIG[task.priority].icon} {PRIORITY_CONFIG[task.priority].label}
-                        </span>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${cfg.color}`}>
-                            {cfg.label}
-                        </span>
-                    </div>
-                </div>
-
-                {expanded && (
-                    <div className="mt-4 pt-4 border-t border-zinc-100 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-1">Checklist</div>
-                        <div className="space-y-1">
-                            {subtasks.map(sub => (
-                                <div key={sub.id} className="flex items-center gap-2 group p-1.5 hover:bg-zinc-50 rounded-xl transition-colors">
-                                    <button 
-                                        onClick={() => toggleSubtask(sub.id)}
-                                        className={`flex-none transition-colors ${sub.completed ? 'text-emerald-500' : 'text-zinc-300 hover:text-zinc-400'}`}
-                                    >
-                                        {sub.completed ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
-                                    </button>
-                                    <span className={`flex-1 text-sm transition-all ${sub.completed ? 'text-zinc-400 line-through' : 'text-zinc-700'}`}>
-                                        {sub.title}
-                                    </span>
-                                    <button 
-                                        onClick={() => deleteSubtask(sub.id)}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <form onSubmit={addSubtask} className="flex gap-2">
-                            <div className="relative flex-1">
-                                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                                <input 
-                                    type="text"
-                                    value={newSubtask}
-                                    onChange={e => setNewSubtask(e.target.value)}
-                                    placeholder="เพิ่มขั้นตอนย่อย..."
-                                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-9 pr-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-zinc-900 transition-all"
-                                />
-                            </div>
-                            <button 
-                                type="submit"
-                                disabled={!newSubtask.trim()}
-                                className="bg-zinc-900 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-zinc-800 disabled:opacity-50 transition-all shadow-sm"
-                            >
-                                เพิ่ม
-                            </button>
-                        </form>
+                        />
                     </div>
                 )}
 
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-zinc-100">
-                    <select
-                        value={task.status}
-                        onChange={(e) =>
-                            onStatusChange(task.id, e.target.value as TaskStatus)
-                        }
-                        className="text-xs font-medium text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 px-3 py-2 rounded-xl transition-all shadow-sm outline-none cursor-pointer"
-                    >
-                        <option value="TODO">📌 TODO</option>
-                        <option value="DOING">⚡ DOING</option>
-                        <option value="DONE">✅ DONE</option>
-                    </select>
-                    <button onClick={() => { setEditing(true); setEditTitle(task.title) }}
-                        className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 hover:bg-zinc-50 px-3 py-2 rounded-xl transition-all shadow-sm">
-                        ✏️ แก้ไข
-                    </button>
-                    <button
-                        onClick={() => setShowDelete(true)}
-                        className="text-xs font-medium text-red-500 hover:text-red-600 bg-white border border-red-100 hover:bg-red-50 px-3 py-2 rounded-xl transition-all shadow-sm ml-auto"
-                    >
-                        🗑️ ลบ
-                    </button>
+                <div className="px-6 py-5 md:px-6 md:py-4">
+                    {/* ── Top ───────────────────────────────────────── */}
+                    <div className="flex items-start gap-4">
+
+                        {/* Checkbox */}
+                        <button
+                            onClick={() =>
+                                onStatusChange(task.id, isDone ? 'TODO' : 'DONE')
+                            }
+                            className={cn(
+                                'mt-1 flex h-7 w-7 flex-none items-center justify-center rounded-full border-2 transition-all active:scale-90',
+                                isDone
+                                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                                    : 'border-zinc-300 dark:border-zinc-600 hover:border-emerald-400'
+                            )}
+                        >
+                            {isDone && <CheckCircle2 className="h-5 w-5" />}
+                        </button>
+
+                        {/* Title */}
+                        <div className="min-w-0 flex-1">
+                            {editing ? (
+                                <div className="flex flex-wrap items-center gap-3">
+
+                                    <input
+                                        autoFocus
+                                        value={editTitle}
+                                        onChange={(e) => setEditTitle(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSave()
+                                            if (e.key === 'Escape') setEditing(false)
+                                        }}
+                                        className="min-w-0 flex-1 border-b border-zinc-900 bg-transparent pb-1 text-lg font-bold text-zinc-900 outline-none dark:border-zinc-100 dark:text-zinc-100"
+                                    />
+
+                                    <button
+                                        onClick={handleSave}
+                                        className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
+                                    >
+                                        Save
+                                    </button>
+
+                                    <button
+                                        onClick={() => setEditing(false)}
+                                        className="rounded-xl bg-zinc-100 px-4 py-2 text-sm font-bold text-zinc-600 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            ) : (
+                                <p
+                                    className={cn(
+                                        'text-lg font-bold leading-relaxed tracking-tight md:text-xl',
+                                        isDone
+                                            ? 'text-zinc-400 line-through'
+                                            : 'text-zinc-800 dark:text-zinc-100',
+                                        overdue &&
+                                        !isDone &&
+                                        'text-rose-600 dark:text-rose-400'
+                                    )}
+                                >
+                                    {task.title}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Right badges */}
+                        {!editing && (
+                            <div className="ml-2 flex flex-none items-center gap-2">
+
+                                {/* Priority */}
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-sm md:text-sm',
+                                        priorityCfg.pill
+                                    )}
+                                >
+                                    <PIcon className="h-3.5 w-3.5" />
+                                    {priorityCfg.label}
+                                </span>
+
+                                {/* Status */}
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-sm md:text-sm',
+                                        statusCfg.pill
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            'h-2 w-2 rounded-full',
+                                            statusCfg.left
+                                        )}
+                                    />
+                                    {statusCfg.label}
+                                </span>
+
+                                {/* Overdue */}
+                                {overdue && !isDone && (
+                                    <span className="inline-flex items-center rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white shadow-sm md:text-sm">
+                                        ⚠️เกินเวลา
+                                    </span>
+                                )}
+
+                                {/* Drag */}
+                                <div
+                                    {...attributes}
+                                    {...listeners}
+                                    className="cursor-grab rounded-xl p-2 text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:cursor-grabbing dark:hover:bg-zinc-800"
+                                >
+                                    <GripVertical className="h-5 w-5" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Meta ─────────────────────────────────────── */}
+                    <div className=" flex flex-wrap items-center gap-4 pl-11 text-sm text-zinc-500 dark:text-zinc-400">
+                        {task.deadline && (
+                            <span
+                                className={cn(
+                                    'flex items-center gap-1.5',
+                                    overdue && !isDone && 'text-rose-500'
+                                )}
+                            >
+                                <Calendar className="h-4 w-4" />
+                                {fmtDate(task.deadline)}
+                            </span>
+                        )}
+
+                        {subtasks.length > 0 && (
+                            <span className="flex items-center gap-1.5">
+                                <ListTodo className="h-4 w-4" />
+                                {done}/{subtasks.length}
+                            </span>
+                        )}
+
+                        <span className="flex items-center gap-1.5">
+                            <Clock className="h-4 w-4" />
+                            {fmtRel(task.created_at)}
+                        </span>
+                    </div>
+
+                    {/* ── Tags ─────────────────────────────────────── */}
+                    {task.tags && task.tags.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2 pl-11">
+                            {task.tags.map((tag) => (
+                                <span
+                                    key={tag}
+                                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                >
+                                    #{tag}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Expanded ─────────────────────────────────── */}
+                    <AnimatePresence>
+                        {expanded && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="mt-5 space-y-2 border-t border-zinc-100 pt-5 pl-11 dark:border-zinc-800">
+                                    {/* Subtasks */}
+                                    {subtasks.map((sub) => (
+                                        <div
+                                            key={sub.id}
+                                            className="group/sub flex items-center gap-3 rounded-2xl px-3 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                                        >
+                                            <button
+                                                onClick={() => {
+                                                    const updated = subtasks.map((s) =>
+                                                        s.id === sub.id
+                                                            ? {
+                                                                ...s,
+                                                                completed: !s.completed,
+                                                            }
+                                                            : s
+                                                    )
+
+                                                    onUpdateSubtasks(task.id, updated)
+                                                }}
+                                                className={cn(
+                                                    'flex-none transition-colors',
+                                                    sub.completed
+                                                        ? 'text-emerald-500'
+                                                        : 'text-zinc-300 dark:text-zinc-600'
+                                                )}
+                                            >
+                                                {sub.completed ? (
+                                                    <CheckCircle2 className="h-5 w-5" />
+                                                ) : (
+                                                    <Circle className="h-5 w-5" />
+                                                )}
+                                            </button>
+
+                                            <span
+                                                className={cn(
+                                                    'flex-1 text-sm leading-relaxed md:text-base',
+                                                    sub.completed
+                                                        ? 'text-zinc-400 line-through'
+                                                        : 'text-zinc-700 dark:text-zinc-200'
+                                                )}
+                                            >
+                                                {sub.title}
+                                            </span>
+
+                                            <button
+                                                onClick={() =>
+                                                    onUpdateSubtasks(
+                                                        task.id,
+                                                        subtasks.filter((s) => s.id !== sub.id)
+                                                    )
+                                                }
+                                                className="opacity-0 transition-all group-hover/sub:opacity-100 text-zinc-300 hover:text-rose-500"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    {/* Add subtask */}
+                                    <form
+                                        onSubmit={addSubtask}
+                                        className="flex gap-3 pt-2"
+                                    >
+                                        <input
+                                            value={newSubtask}
+                                            onChange={(e) =>
+                                                setNewSubtask(e.target.value)
+                                            }
+                                            placeholder="เพิ่มรายละเอียด..."
+                                            className="flex-1 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-zinc-300 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:ring-zinc-600 md:text-base"
+                                        />
+
+                                        <button
+                                            type="submit"
+                                            disabled={!newSubtask.trim()}
+                                            className="rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-80 disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+                                        >
+                                            เพิ่ม
+                                        </button>
+                                    </form>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* ── Bottom ───────────────────────────────────── */}
+                    <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-2 dark:border-zinc-800">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Status */}
+                            <select
+                                value={task.status}
+                                onChange={(e) =>
+                                    onStatusChange(
+                                        task.id,
+                                        e.target.value as TaskStatus
+                                    )
+                                }
+                                className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-2 py-1.5 text-sm font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-all cursor-pointer appearance-none"
+                            >
+                                <option value="TODO">📌 TODO</option>
+                            <option value="DOING">⚡ DOING</option>
+                            <option value="DONE">✅ DONE</option>
+                            </select>
+
+                            {/* Edit */}
+                            <button
+                                onClick={() => {
+                                    setEditing(true)
+                                    setEditTitle(task.title)
+                                }}
+                                className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            >
+                                <Edit3 className="h-4 w-4" />
+                                แก้ไข
+                            </button>
+
+                            {/* Subtasks */}
+                            <button
+                                onClick={() => setExpanded(!expanded)}
+                                className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-zinc-500 transition-all hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                            >
+                                {subtasks.length > 0 ? (
+                                    <>
+                                        <ListTodo className="h-4 w-4" />
+                                        {Math.round(progress)}%
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4" />
+                                        เพิ่มรายการ
+                                    </>
+                                )}
+
+                                <ChevronDown
+                                    className={cn(
+                                        'h-4 w-4 transition-transform',
+                                        expanded && 'rotate-180'
+                                    )}
+                                />
+                            </button>
+                        </div>
+
+                        {/* Delete */}
+                        <button
+                            onClick={() => setShowDelete(true)}
+                            className="rounded-xl p-2 text-zinc-300 transition-all hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/20"
+                        >
+                            <Trash2 className="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {showDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-                    <div className="w-full max-w-sm bg-white border border-zinc-200 rounded-3xl shadow-2xl p-6 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-2xl mx-auto mb-4">
-                            🗑️
-                        </div>
-                        <h3 className="text-lg font-semibold text-zinc-900 text-center">
-                            ลบงานนี้?
-                        </h3>
-                        <p className="text-sm text-zinc-500 text-center mt-2 leading-relaxed">
-                            คุณแน่ใจหรือไม่ว่าต้องการลบ
-                            <br />
-                            <span className="font-medium text-zinc-700">
+            {/* ── Delete Modal ───────────────────────────────── */}
+            <AnimatePresence>
+                {showDelete && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="w-full max-w-sm rounded-3xl border border-zinc-200 bg-white p-7 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+                        >
+                            <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+                                ลบงานนี้?
+                            </p>
+
+                            <p className="mt-2 text-sm leading-relaxed text-zinc-500">
                                 &quot;{task.title}&quot;
-                            </span>
-                        </p>
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => setShowDelete(false)}
-                                className="flex-1 border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 py-3 rounded-xl text-sm font-medium transition-all"
-                            >
-                                ยกเลิก
-                            </button>
-                            <button
-                                onClick={() => {
-                                    onDelete(task.id)
-                                    setShowDelete(false)
-                                }}
-                                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl text-sm font-semibold transition-all shadow-sm"
-                            >
-                                ลบเลย
-                            </button>
-                        </div>
+                                จะถูกลบออกจากรายการอย่างถาวร
+                            </p>
+
+                            <div className="mt-6 flex gap-3">
+                                <button
+                                    onClick={() => setShowDelete(false)}
+                                    className="flex-1 rounded-2xl py-3 text-sm font-bold text-zinc-500 transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                >
+                                    ยกเลิก
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        onDelete(task.id)
+                                        setShowDelete(false)
+                                    }}
+                                    className="flex-1 rounded-2xl bg-rose-500 py-3 text-sm font-bold text-white transition-colors hover:bg-rose-600"
+                                >
+                                    ยืนยันลบ
+                                </button>
+                            </div>
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
         </div>
     )
 }

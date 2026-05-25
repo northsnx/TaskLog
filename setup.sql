@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
+    xp INTEGER DEFAULT 0 NOT NULL,
+    level INTEGER DEFAULT 1 NOT NULL,
     created_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'asia/bangkok') NOT NULL
 );
 

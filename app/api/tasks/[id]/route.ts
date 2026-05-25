@@ -10,6 +10,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
 
   const body = await req.json()
+  
+  // Fetch current task to check status change
+  const { data: currentTask } = await supabase
+    .from('tasks')
+    .select('status')
+    .eq('id', id)
+    .single()
+
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (body.title !== undefined) updates.title = body.title
   if (body.status !== undefined) updates.status = body.status
@@ -26,6 +34,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Gamification: Award XP for completing a task
+  if (currentTask && currentTask.status !== 'DONE' && body.status === 'DONE') {
+    const { data: userData } = await supabase
+        .from('users')
+        .select('xp, level')
+        .eq('id', user.id)
+        .single()
+    
+    if (userData) {
+        const newXp = userData.xp + 10
+        const newLevel = Math.floor(newXp / 100) + 1
+        
+        await supabase
+            .from('users')
+            .update({ xp: newXp, level: newLevel })
+            .eq('id', user.id)
+    }
+  }
+
   return NextResponse.json({ task: data })
 }
 

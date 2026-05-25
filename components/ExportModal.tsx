@@ -131,7 +131,7 @@ export function ExportModal({ onClose }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                Deadline จาก
+                วันที่เริ่มต้น
               </label>
 
               <input
@@ -144,7 +144,7 @@ export function ExportModal({ onClose }: Props) {
 
             <div>
               <label className="text-sm font-medium text-zinc-700 mb-1.5 block">
-                Deadline ถึง
+                วันที่สิ้นสุด
               </label>
 
               <input

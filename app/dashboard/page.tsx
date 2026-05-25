@@ -10,7 +10,7 @@ import {
     SortableContext, sortableKeyboardCoordinates,
     verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
-import { List, Calendar, BarChart2 } from 'lucide-react'
+import { List, Calendar, BarChart2, Search, Timer, LogOut, Download } from 'lucide-react'
 import type { Task, TaskStatus, SessionUser, Subtask } from '@/types'
 import { DashboardStats } from '@/components/DashboardStats'
 import { TaskForm } from '@/components/TaskForm'
@@ -18,8 +18,16 @@ import { TaskFilters } from '@/components/TaskFilters'
 import { TaskCard } from '@/components/TaskCard'
 import { ExportModal } from '@/components/ExportModal'
 import { StreakBadge } from '@/components/StreakBadge'
+import { LevelBadge } from '@/components/LevelBadge'
+import { AchievementsModal } from '@/components/AchievementsModal'
 import { CalendarView } from '@/components/CalendarView'
 import { Analytics } from '@/components/Analytics'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { PomodoroTimer } from '@/components/PomodoroTimer'
+import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
+import { playSuccessSound } from '@/lib/audio'
+import Image from 'next/image'
 
 type FilterType = TaskStatus | 'ALL' | 'OVERDUE'
 type ViewType = 'LIST' | 'CALENDAR' | 'ANALYTICS'
@@ -35,8 +43,13 @@ export default function Dashboard() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [filter, setFilter] = useState<FilterType>('ALL')
     const [view, setView] = useState<ViewType>('LIST')
+    const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
     const [showExport, setShowExport] = useState(false)
+    const [showTimer, setShowTimer] = useState(false)
+    const [showAchievements, setShowAchievements] = useState(false)
+    const [combo, setCombo] = useState(0)
+    const lastDoneRef = useRef<number>(0)
     const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
     const sensors = useSensors(
@@ -51,103 +64,103 @@ export default function Dashboard() {
         setTasks(data.tasks || [])
     }, [router])
 
+    const fetchUser = useCallback(async () => {
+        const res = await fetch('/api/auth/me')
+        const { user } = await res.json()
+        if (user) setUser(user)
+        else router.push('/')
+    }, [router])
+
     useEffect(() => {
         let mounted = true
-        fetch('/api/auth/me')
-            .then(r => r.json())
-            .then(({ user }) => {
-                if (!user || !mounted) { router.push('/'); return }
-                setUser(user)
-                fetchTasks().then(() => setLoading(false))
+        fetchUser().then(() => {
+            if (mounted) fetchTasks().then(() => setLoading(false))
+        })
 
-                const channel = supabase
-                    .channel(`tasks:${user.id}`)
-                    .on(
-                        'postgres_changes',
-                        {
-                            event: '*',
-                            schema: 'public',
-                            table: 'tasks',
-                            filter: `user_id=eq.${user.id}`,
-                        },
-                        (payload) => {
-                            console.log('Realtime event:', payload)
-                            if (mounted) fetchTasks()
-                        }
-                    )
-                    .on(
-                        'broadcast',
-                        { event: 'refresh' },
-                        () => {
-                            console.log('Broadcast refresh event received')
-                            if (mounted) fetchTasks()
-                        }
-                    )
-                    .subscribe((status) => {
-                        console.log('Realtime status:', status)
-                    })
-                realtimeRef.current = channel
-            })
+        const channel = supabase
+            .channel(`tasks:${user?.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'tasks',
+                    filter: `user_id=eq.${user?.id}`,
+                },
+                (payload) => {
+                    if (mounted) fetchTasks()
+                }
+            )
+            .subscribe()
+        realtimeRef.current = channel
+
         return () => {
             mounted = false
             realtimeRef.current?.unsubscribe()
-            realtimeRef.current = null
         }
-    }, [fetchTasks, router])
+    }, [fetchTasks, fetchUser, user?.id])
 
     const handleAdd = async (data: {
         title: string; status: TaskStatus; deadline: string
         priority: 'LOW' | 'MEDIUM' | 'HIGH'; tags: string[]
     }) => {
-        await fetch('/api/tasks', {
+        const res = await fetch('/api/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         })
+        if (res.ok) {
+            toast.success('เพิ่มงานเรียบร้อยแล้ว ✨')
+        } else {
+            toast.error('ไม่สามารถเพิ่มงานได้ กรุณาลองใหม่')
+        }
         await fetchTasks()
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const handleStatusChange = async (id: string, status: TaskStatus) => {
-        await fetch(`/api/tasks/${id}`, {
+        const res = await fetch(`/api/tasks/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
         })
+        if (res.ok) {
+            if (status === 'DONE') {
+                playSuccessSound()
+                
+                // Combo logic
+                const now = Date.now()
+                let newCombo = 1
+                if (now - lastDoneRef.current < 10 * 60 * 1000) { // 10 minutes window
+                    newCombo = combo + 1
+                }
+                setCombo(newCombo)
+                lastDoneRef.current = now
+
+                const comboMsg = newCombo > 1 ? ` (${newCombo}x Combo! 🔥)` : ''
+                toast.success(`งานเสร็จสิ้น! +10 XP 🎉${comboMsg}`)
+                fetchUser()
+            } else {
+                toast.info('อัปเดตสถานะแล้ว')
+                setCombo(0) // Reset combo if task is undone
+            }
+        }
         await fetchTasks()
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const handleEdit = async (id: string, title: string) => {
-        await fetch(`/api/tasks/${id}`, {
+        const res = await fetch(`/api/tasks/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title }),
         })
+        if (res.ok) toast.success('แก้ไขข้อมูลเรียบร้อย')
         await fetchTasks()
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const handleDelete = async (id: string) => {
-        await fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+        const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+        if (res.ok) toast.success('ลบงานเรียบร้อยแล้ว')
         await fetchTasks()
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const handleUpdateSubtasks = async (id: string, subtasks: Subtask[]) => {
@@ -157,11 +170,6 @@ export default function Dashboard() {
             body: JSON.stringify({ subtasks }),
         })
         await fetchTasks()
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const handleDragEnd = async (event: DragEndEvent) => {
@@ -178,11 +186,6 @@ export default function Dashboard() {
                 body: JSON.stringify({ sort_order: i }),
             })
         ))
-        realtimeRef.current?.send({
-            type: 'broadcast',
-            event: 'refresh',
-            payload: {}
-        })
     }
 
     const logout = async () => {
@@ -192,6 +195,10 @@ export default function Dashboard() {
 
     const overdueCount = tasks.filter(isOverdue).length
     const filtered = tasks.filter(t => {
+        const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                             t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        if (!matchesSearch) return false
+
         if (filter === 'ALL') return true
         if (filter === 'OVERDUE') return isOverdue(t)
         return t.status === filter
@@ -199,101 +206,202 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
+            <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center">
                 <div className="text-zinc-500 text-sm font-medium animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         )
     }
 
     return (
-        <main className="min-h-screen bg-zinc-50 text-zinc-900 pb-16 font-sans">
+        <main className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 pb-16 font-sans selection:bg-zinc-900 selection:text-white dark:selection:bg-zinc-100 dark:selection:text-zinc-900">
             {/* Header */}
-            <div className="border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-                <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold tracking-tight text-zinc-900">📋 Daily Task Log</span>
-                        <span className="text-zinc-500 text-sm bg-zinc-100 px-2 py-0.5 rounded-full">@{user?.username}</span>
-                    </div>
+            <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md sticky top-0 z-20 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <StreakBadge />
-                        <button onClick={() => setShowExport(true)}
-                            className="text-xs font-medium bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-3 py-1.5 rounded-lg transition-all shadow-sm">
-                            📥 Export CSV
-                        </button>
+                        <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center shadow-lg shadow-zinc-200 dark:shadow-none">
+                            <Image
+                                src="/favicon.ico"
+                                alt="ExTaskX Logo" 
+                                width={20}
+                                height={20}
+                                className="invert dark:invert-0"
+                            />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-base font-black tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">ExTaskX</span>
+                            <span className="text-[10px] font-bold text-zinc-400 mt-1 uppercase tracking-wider">Dashboard</span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        <div className="hidden md:flex items-center gap-2 pr-4 border-r border-zinc-200 dark:border-zinc-800 h-8">
+                            <div className="cursor-pointer hover:opacity-80 transition-all active:scale-95" onClick={() => setShowAchievements(true)}>
+                                <LevelBadge level={user?.level || 1} xp={user?.xp || 0} />
+                            </div>
+                            <StreakBadge />
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-700/50">
+                            <ThemeToggle />
+                            <button 
+                                onClick={() => setShowTimer(!showTimer)}
+                                className={`p-2 rounded-lg transition-all ${showTimer ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'}`}
+                                title="Pomodoro Timer"
+                            >
+                                <Timer className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setShowExport(true)}
+                                className="p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all"
+                                title="Export CSV"
+                            >
+                                <Download className="w-4 h-4" />
+                            </button>
+                        </div>
+
                         <button onClick={logout}
-                            className="text-xs font-medium text-zinc-500 hover:text-red-600 px-3 py-1.5 rounded-lg transition-colors">
-                            ออกจากระบบ
+                            className="hidden sm:flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-red-500 bg-zinc-100 dark:bg-zinc-800/50 px-4 py-2 rounded-xl transition-all border border-zinc-200/50 dark:border-zinc-700/50 hover:border-red-200">
+                            <LogOut className="w-3.5 h-3.5" />
+                            ออก
                         </button>
+                    </div>
+                </div>
+                
+                {/* Mobile Info Bar */}
+                <div className="md:hidden px-4 py-2 flex justify-between items-center border-t border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-950/50">
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">@{user?.username}</div>
+                    <div className="flex items-center gap-2 scale-90 origin-right">
+                        <div className="cursor-pointer" onClick={() => setShowAchievements(true)}>
+                            <LevelBadge level={user?.level || 1} xp={user?.xp || 0} />
+                        </div>
+                        <StreakBadge />
                     </div>
                 </div>
             </div>
 
-            <div className={`mx-auto px-4 pt-8 space-y-8 transition-all duration-500 ${view === 'LIST' ? 'max-w-3xl' : 'max-w-5xl'}`}>
+            <div className={`mx-auto px-4 pt-8 space-y-10 transition-all duration-500 ${view === 'LIST' ? 'max-w-3xl' : 'max-w-6xl'}`}>
                
-                {/* View Switcher */}
-                <div className="flex justify-center">
-                    <div className="inline-flex bg-zinc-200/50 p-1 rounded-2xl border border-zinc-200 shadow-inner">
-                        <button
-                            onClick={() => setView('LIST')}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                                view === 'LIST' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                            }`}
-                        >
-                            <List className="w-4 h-4" />
-                            รายการ
-                        </button>
-                        <button
-                            onClick={() => setView('CALENDAR')}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                                view === 'CALENDAR' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                            }`}
-                        >
-                            <Calendar className="w-4 h-4" />
-                            ปฏิทิน
-                        </button>
-                        <button
-                            onClick={() => setView('ANALYTICS')}
-                            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                                view === 'ANALYTICS' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-                            }`}
-                        >
-                            <BarChart2 className="w-4 h-4" />
-                            สถิติ
-                        </button>
+                {showTimer && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="mb-4"
+                    >
+                        <PomodoroTimer />
+                    </motion.div>
+                )}
+
+                {/* Main Unified Toolbar */}
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white dark:bg-zinc-900/50 p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm">
+                        <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                            <button
+                                onClick={() => setView('LIST')}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                                    view === 'LIST' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                }`}
+                            >
+                                <List className="w-4 h-4" />
+                                <span>รายการ</span>
+                            </button>
+                            <button
+                                onClick={() => setView('CALENDAR')}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                                    view === 'CALENDAR' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                }`}
+                            >
+                                <Calendar className="w-4 h-4" />
+                                <span>ปฏิทิน</span>
+                            </button>
+                            <button
+                                onClick={() => setView('ANALYTICS')}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+                                    view === 'ANALYTICS' ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                                }`}
+                            >
+                                <BarChart2 className="w-4 h-4" />
+                                <span>สถิติ</span>
+                            </button>
+                        </div>
+
+                        {view === 'LIST' && (
+                            <div className="relative flex-1 md:max-w-xs">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหางานหรือแท็ก..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-100 transition-all placeholder:text-zinc-400"
+                                />
+                            </div>
+                        )}
                     </div>
+
+                    <DashboardStats tasks={tasks} />
                 </div>
 
-                 <DashboardStats tasks={tasks} />
-
                 {view === 'LIST' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <TaskForm onAdd={handleAdd} />
-                        <TaskFilters current={filter} overdueCount={overdueCount} onChange={setFilter} />
+                        
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between px-2">
+                                <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                                    <span className="w-2 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-full" />
+                                    งานของคุณ
+                                    <span className="text-sm font-bold text-zinc-400 ml-2">{filtered.length}</span>
+                                </h2>
+                                <TaskFilters current={filter} overdueCount={overdueCount} onChange={setFilter} />
+                            </div>
 
-                        {/* Task List */}
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                            <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                                <div className="space-y-3">
-                                    {filtered.length === 0 && (
-                                        <div className="flex flex-col items-center justify-center py-16 bg-white border border-zinc-200 border-dashed rounded-2xl">
-                                            <span className="text-4xl mb-3">📭</span>
-                                            <div className="text-zinc-400 text-sm font-medium">ไม่มีงานในหมวดหมู่นี้</div>
-                                        </div>
-                                    )}
-                                    {filtered.map(task => (
-                                        <TaskCard
-                                            key={task.id}
-                                            task={task}
-                                            onStatusChange={handleStatusChange}
-                                            onEdit={handleEdit}
-                                            onDelete={handleDelete}
-                                            onUpdateSubtasks={handleUpdateSubtasks}
-                                        />
-
-                                    ))}
-                                </div>
-                            </SortableContext>
-                        </DndContext>
+                            {/* Task List */}
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                                    <div className="space-y-4">
+                                        <AnimatePresence mode="popLayout">
+                                            {filtered.length === 0 && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 border-dashed rounded-[2rem]"
+                                                >
+                                                    <div className="w-16 h-16 rounded-3xl bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center text-3xl mb-4">
+                                                        📭
+                                                    </div>
+                                                    <div className="text-zinc-900 dark:text-zinc-100 font-bold">ไม่พบรายการงาน</div>
+                                                    <div className="text-zinc-400 text-sm mt-1">ลองเปลี่ยนฟิลเตอร์หรือเพิ่มงานใหม่</div>
+                                                </motion.div>
+                                            )}
+                                            {filtered.map(task => (
+                                                <motion.div
+                                                    key={task.id}
+                                                    layout
+                                                    initial={{ opacity: 0, scale: 0.98 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    transition={{ duration: 0.2 }}
+                                                >
+                                                    <motion.div
+                                                        whileHover={{ y: -2 }}
+                                                        className="active:cursor-grabbing"
+                                                    >
+                                                        <TaskCard
+                                                            task={task}
+                                                            onStatusChange={handleStatusChange}
+                                                            onEdit={handleEdit}
+                                                            onDelete={handleDelete}
+                                                            onUpdateSubtasks={handleUpdateSubtasks}
+                                                        />
+                                                    </motion.div>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                </SortableContext>
+                            </DndContext>
+                        </div>
                     </div>
                 )}
 
@@ -311,6 +419,13 @@ export default function Dashboard() {
             </div>
 
             {showExport && <ExportModal onClose={() => setShowExport(false)} />}
+            
+            <AchievementsModal 
+                isOpen={showAchievements} 
+                onClose={() => setShowAchievements(false)} 
+                level={user?.level || 1}
+                xp={user?.xp || 0}
+            />
         </main>
     )
 }

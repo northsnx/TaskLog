@@ -9,6 +9,8 @@ export interface Subtask {
 export interface User {
     id: string
     username: string
+    xp: number
+    level: number
     created_at: string
 }
 
@@ -28,4 +30,6 @@ export interface Task {
 export interface SessionUser {
     id: string
     username: string
+    xp: number
+    level: number
 }
