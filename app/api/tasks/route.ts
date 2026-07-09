@@ -13,7 +13,7 @@ export async function GET() {
     const user = JSON.parse(session.value)
 
     const { data, error } = await supabase
-        .from('tasks')
+        .from('tasklog_tasks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { title, description, status, deadline, priority, tags } = await req.json()
 
     const { data, error } = await supabase
-        .from('tasks')
+        .from('tasklog_tasks')
         .insert({
             user_id: user.id,
             title,

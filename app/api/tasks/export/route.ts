@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const to = searchParams.get('to')
 
   let query = supabase
-    .from('tasks')
+    .from('tasklog_tasks')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })

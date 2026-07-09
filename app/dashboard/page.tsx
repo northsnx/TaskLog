@@ -84,7 +84,7 @@ export default function Dashboard() {
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'tasks',
+                    table: 'tasklog_tasks',
                     filter: `user_id=eq.${user?.id}`,
                 },
                 (payload) => {

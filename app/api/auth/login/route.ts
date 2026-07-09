@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   const { username, password } = await req.json()
 
   const { data, error } = await supabase
-    .from('users')
+    .from('tasklog_users')
     .select('id, username')
     .eq('username', username)
     .eq('password', password)

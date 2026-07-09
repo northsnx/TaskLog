@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   
   // Fetch current task to check status change
   const { data: currentTask } = await supabase
-    .from('tasks')
+    .from('tasklog_tasks')
     .select('status')
     .eq('id', id)
     .single()
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.subtasks !== undefined) updates.subtasks = body.subtasks
 
   const { data, error } = await supabase
-    .from('tasks')
+    .from('tasklog_tasks')
     .update(updates)
     .eq('id', id)
     .eq('user_id', user.id)
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Gamification: Award XP for completing a task
   if (currentTask && currentTask.status !== 'DONE' && body.status === 'DONE') {
     const { data: userData } = await supabase
-        .from('users')
+        .from('tasklog_users')
         .select('xp, level')
         .eq('id', user.id)
         .single()
@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const newLevel = Math.floor(newXp / 100) + 1
         
         await supabase
-            .from('users')
+            .from('tasklog_users')
             .update({ xp: newXp, level: newLevel })
             .eq('id', user.id)
     }
@@ -66,7 +66,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
 
   const { error } = await supabase
-    .from('tasks')
+    .from('tasklog_tasks')
     .delete()
     .eq('id', id)
     .eq('user_id', user.id)

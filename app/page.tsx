@@ -44,7 +44,7 @@ export default function LoginPage() {
           className="absolute inset-0 w-full h-full object-cover"
         />
         {/* เลเยอร์สีดำบางๆ ทับรูป เพื่อให้ดูพรีเมียมขึ้น (ลบออกได้ถ้าไม่ชอบ) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-violet-900/60 via-indigo-900/20 to-transparent"></div>
+        {/* <div className="absolute inset-0 bg-gradient-to-t from-violet-900/60 via-indigo-900/20 to-transparent"></div> */}
       </div>
 
       {/* ด้านขวา: ฟอร์ม Login */}

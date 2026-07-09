@@ -1,5 +1,5 @@
 -- Create users table
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE IF NOT EXISTS public.tasklog_users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- Create tasks table
-CREATE TABLE IF NOT EXISTS public.tasks (
+CREATE TABLE IF NOT EXISTS public.tasklog_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.tasklog_users(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     status TEXT DEFAULT 'TODO' NOT NULL,
@@ -25,26 +25,27 @@ CREATE TABLE IF NOT EXISTS public.tasks (
 );
 
 -- Create user_activity table for streaks
-CREATE TABLE IF NOT EXISTS public.user_activity (
+CREATE TABLE IF NOT EXISTS public.tasklog_user_activity (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES public.tasklog_users(id) ON DELETE CASCADE NOT NULL,
     activity_date DATE NOT NULL,
     UNIQUE(user_id, activity_date)
 );
 
 -- Enable RLS
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_activity ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasklog_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasklog_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasklog_user_activity ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users (Allow all for now, since we handle auth manually in API)
-CREATE POLICY "Allow public access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access to users" ON public.tasklog_users FOR ALL USING (true) WITH CHECK (true);
 
 -- RLS Policies for tasks (Only owner can access)
-CREATE POLICY "Users can see their own tasks" ON public.tasks FOR SELECT USING (true); -- Filtered by API
-CREATE POLICY "Users can insert their own tasks" ON public.tasks FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can update their own tasks" ON public.tasks FOR UPDATE USING (true);
-CREATE POLICY "Users can delete their own tasks" ON public.tasks FOR DELETE USING (true);
+CREATE POLICY "Users can see their own tasks" ON public.tasklog_tasks FOR SELECT USING (true); -- Filtered by API
+CREATE POLICY "Users can insert their own tasks" ON public.tasklog_tasks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own tasks" ON public.tasklog_tasks FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own tasks" ON public.tasklog_tasks FOR DELETE USING (true);
 
 -- RLS Policies for user_activity
-CREATE POLICY "Users can see their own activity" ON public.user_activity FOR ALL USING (true);
+CREATE POLICY "Users can see their own activity" ON public.tasklog_user_activity FOR ALL USING (true);
+

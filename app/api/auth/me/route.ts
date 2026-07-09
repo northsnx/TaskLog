@@ -10,7 +10,7 @@ export async function GET() {
   const sessionData = JSON.parse(session.value)
   
   const { data: user, error } = await supabase
-    .from('users')
+    .from('tasklog_users')
     .select('id, username, xp, level')
     .eq('id', sessionData.id)
     .single()

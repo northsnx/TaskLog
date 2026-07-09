@@ -11,12 +11,12 @@ export async function GET() {
   // บันทึกวันนี้
   const today = new Date().toISOString().split('T')[0]
   await supabase
-    .from('user_activity')
+    .from('tasklog_user_activity')
     .upsert({ user_id: user.id, activity_date: today })
 
   // ดึง activity ทั้งหมด
   const { data } = await supabase
-    .from('user_activity')
+    .from('tasklog_user_activity')
     .select('activity_date')
     .eq('user_id', user.id)
     .order('activity_date', { ascending: false })
